@@ -1,4 +1,4 @@
-name: Build and Deploy ASP.NET Core Web App
+name: Deploy to Linux
 
 on:
   push:
@@ -9,19 +9,24 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout the repo
-        uses: actions/checkout@v2
+    - name: Checkout code
+      uses: actions/checkout@v2
+      
+    - name: Install .NET SDK
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '3.1.x'
 
-      - name: Setup .NET Core
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: '5.0.x'
+    - name: Build and Publish
+      run: dotnet publish -c Release -o ./publish
 
-      - name: Restore dependencies
-        run: dotnet restore
-
-      - name: Build the Web App
-        run: dotnet build --configuration Release
-
-      - name: Publish the Web App
-        run: dotnet publish --no-restore --configuration Release -o ./publish
+    - name: Deploy to Server
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.PRIVATE_KEY }}
+        script: |
+          cd /var/www/myapp
+          rm -rf *
+          cp -r /github/workspace/publish/* .
